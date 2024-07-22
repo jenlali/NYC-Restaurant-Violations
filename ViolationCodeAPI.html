@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+	<style>
+		.btn {
+			border: 1px solid black;
+			padding: 5px;
+			display: inline-block;
+		}
+		#output {
+			margin-top: 20px;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>Violation Trends</h1>
+        <h6 style="color: rgb(253, 154, 255);">Count of the Top 5 Most Prevalent NYC Restaurant Health Code Violations</h6>
+		<form>
+            <input type="button" value="Show Results" id="btn_1" onclick="getData()">
+            <input type="button" value="Show Key" id="btn_2" onclick="getKey()">
+		</form>
+		<br><br>
+		<div id="output"></div>
+	</div>
+</body>
+<script>
+function getKey() {
+    $.getJSON("https://data.cityofnewyork.us/resource/43nn-pn8j.json")
+    .done(function(result) {
+        let violations = {};
+        for (let i = 0; i < result.length; i++) {
+            if ("violation_code" in result[i] && "violation_description" in result[i]) {
+                let violation_code = result[i]["violation_code"];
+                let violation_description = result[i]["violation_description"];
+                switch (violation_code) {
+                    case "02B": violation_description = "Hot food item not held at or above 140º F."; break;
+                    case "09C": violation_description = "Food contact surface not properly maintained."; break;
+                    case "04L": violation_description = "Evidence of mice or live mice present in facility's food and/or non-food areas."; break;
+                    case "04M": violation_description = "Live roaches in facility's food or non-food area."; break;
+                    case "04A": violation_description = "Food Protection Certificate (FPC) not held by manager or supervisor of food operations."; break;
+                    case "04K": violation_description = "Evidence of rats or live rats in establishment's food or non-food areas."; break;
+                    case "08A": violation_description = "Establishment is not free of harborage or conditions conducive to rodents, insects or other pests."; break;
+                    case "09B": violation_description = "Thawing procedures improper."; break;
+                }
+                let violation = violation_code + ': ' + violation_description;
+                violations[violation] = (violations[violation] || 0) + 1;
+            }
+        }
+        let sorted_violations = Object.keys(violations).sort((a, b) => violations[b] - violations[a]);
+        let top_violations = sorted_violations.slice(0, 5);
+        let key = '';
+        top_violations.forEach((violation, index) => {
+            key += `<p>${index + 1}. ${violation} (${violations[violation]} occurrences)</p>`;
+        });
+        $("#output").append('<div id="key">' + key + '</div>');
+    })
+    .fail(function() {
+        $("#output").html("<p>Error retrieving data.</p>");
+    });
+}
+
+function getData() {
+    $.getJSON("https://data.cityofnewyork.us/resource/43nn-pn8j.json")
+    .done(function(result) {
+        let violations = {};
+        for (let i = 0; i < result.length; i++) {
+            if (result[i]["violation_code"] && result[i]["violation_description"]) {
+                let violation_code = result[i]["violation_code"];
+                violations[violation_code] = (violations[violation_code] || 0) + 1;
+            }
+        }
+        let sorted_violations = Object.keys(violations).sort((a, b) => violations[b] - violations[a]);
+        let top_violations = sorted_violations.slice(0, 5);
+        let chart_data = top_violations.map(code => ({
+            "violation_code": code,
+            "count": violations[code]
+        }));
+        plotTheChart(chart_data);
+    })
+    .fail(function() {
+        $("#output").html("<p>Error retrieving data.</p>");
+    });
+}
+
+function plotTheChart(chart_data) {
+    let data = chart_data.map(item => item.count).join(",");
+    let labels = chart_data.map(item => item.violation_code).join("|");
+    let imageurl = "https://image-charts.com/chart?";
+    imageurl += "chco=3B0B39|6A5ACD|AFEEEE|FFC0CB|FF69B4&";
+    imageurl += "chd=t:" + data + "&";
+    imageurl += "chds=0," + Math.max(...chart_data.map(item => item.count)) + "&";
+    imageurl += "chs=700x700&";
+    imageurl += "cht=bvs&";
+    imageurl += "chxl=1:|" + labels + "&";
+    imageurl += "chxt=y,x";
+    $("#output").html(`<img src='${imageurl}'>`);
+}
+</script>
+</html>
+
+
+
